@@ -1,0 +1,29 @@
+# Build outputs
+bin/
+obj/
+*.exe
+*.dll
+*.pdb
+*.cache
+*.user
+*.suo
+
+# IDE
+.vs/
+*.sln.docstates
+
+# Logs
+logs/
+*.log
+
+# SDK / third-party binaries (keep lib/ tracked for SDK DLL)
+opc-core-components-3.00.105-release-/
+
+# OS
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+# Temp
+*.tmp
+*.bak
