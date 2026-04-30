@@ -1,0 +1,13 @@
+# OPC HDA Broker — Tag Configuration
+# One tag path per line. Lines starting with # are comments.
+# These are the tag paths as they appear in KepServerEX Local Historian.
+#
+# To find your tag paths, use the KepServerEX Configuration UI:
+#   Local Historian > Datastore > _ImportedTags > [your tags]
+#
+# Example tag paths:
+# PLF_A10.A10.10QT0002
+# PLF_A10.A10.10QT0003
+# _LocalHistorian.Datastore._ImportedTags.PLF_A10.A10.10QT0002
+#
+# Add your tags below (one per line):
