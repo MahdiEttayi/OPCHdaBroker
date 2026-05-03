@@ -1,0 +1,24 @@
+{
+  "queries": [
+    {
+      "refId": "A",
+      "datasource": {
+        "type": "yesoreyeram-infinity-datasource",
+        "uid": "bfkz8klh3klc0a"
+      },
+      "type": "json",
+      "source": "url",
+      "format": "dataframe",
+      "url": "http://localhost:5000/api/status",
+      "root_selector": "",
+      "columns": [],
+      "url_options": {
+        "method": "GET",
+        "data": ""
+      },
+      "filters": []
+    }
+  ],
+  "from": "now-1h",
+  "to": "now"
+}

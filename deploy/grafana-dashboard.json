@@ -1,0 +1,679 @@
+{
+  "id": 1890056173355008,
+  "panels": [
+    {
+      "datasource": {
+        "type": "yesoreyeram-infinity-datasource",
+        "uid": "bfkz8klh3klc0a"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "green",
+            "mode": "fixed"
+          },
+          "mappings": [
+            {
+              "options": {
+                "Operational": {
+                  "color": "green",
+                  "text": "ONLINE"
+                }
+              },
+              "type": "value"
+            }
+          ]
+        }
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 0,
+        "y": 0
+      },
+      "id": 1,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "/.*/"
+        }
+      },
+      "targets": [
+        {
+          "columns": [
+            {
+              "selector": "serverStatus",
+              "text": "Status",
+              "type": "string"
+            }
+          ],
+          "filters": [],
+          "format": "dataframe",
+          "refId": "A",
+          "parser": "backend",
+          "root_selector": "",
+          "source": "url",
+          "type": "json",
+          "url": "http://localhost:5000/api/status/list",
+          "url_options": {
+            "data": "",
+            "method": "GET"
+          }
+        }
+      ],
+      "title": "Broker Status",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "yesoreyeram-infinity-datasource",
+        "uid": "bfkz8klh3klc0a"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "blue",
+            "mode": "fixed"
+          }
+        }
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 6,
+        "y": 0
+      },
+      "id": 2,
+      "options": {
+        "colorMode": "none",
+        "graphMode": "none",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "/.*/"
+        }
+      },
+      "targets": [
+        {
+          "columns": [
+            {
+              "selector": "serverVersion",
+              "text": "Version",
+              "type": "string"
+            }
+          ],
+          "filters": [],
+          "format": "dataframe",
+          "refId": "A",
+          "parser": "backend",
+          "root_selector": "",
+          "source": "url",
+          "type": "json",
+          "url": "http://localhost:5000/api/status/list",
+          "url_options": {
+            "data": "",
+            "method": "GET"
+          }
+        }
+      ],
+      "title": "KepServerEX",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "yesoreyeram-infinity-datasource",
+        "uid": "bfkz8klh3klc0a"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "purple",
+            "mode": "fixed"
+          }
+        }
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 12,
+        "y": 0
+      },
+      "id": 3,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "/.*/"
+        }
+      },
+      "targets": [
+        {
+          "columns": [
+            {
+              "selector": "tagCount",
+              "text": "Tags",
+              "type": "number"
+            }
+          ],
+          "filters": [],
+          "format": "dataframe",
+          "refId": "A",
+          "parser": "backend",
+          "root_selector": "",
+          "source": "url",
+          "type": "json",
+          "url": "http://localhost:5000/api/status/list",
+          "url_options": {
+            "data": "",
+            "method": "GET"
+          }
+        }
+      ],
+      "title": "Tags",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "yesoreyeram-infinity-datasource",
+        "uid": "bfkz8klh3klc0a"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "orange",
+            "mode": "fixed"
+          }
+        }
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 18,
+        "y": 0
+      },
+      "id": 4,
+      "options": {
+        "colorMode": "none",
+        "graphMode": "none",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "/.*/"
+        }
+      },
+      "targets": [
+        {
+          "columns": [
+            {
+              "selector": "brokerUptime",
+              "text": "Uptime",
+              "type": "string"
+            }
+          ],
+          "filters": [],
+          "format": "dataframe",
+          "refId": "A",
+          "parser": "backend",
+          "root_selector": "",
+          "source": "url",
+          "type": "json",
+          "url": "http://localhost:5000/api/status/list",
+          "url_options": {
+            "data": "",
+            "method": "GET"
+          }
+        }
+      ],
+      "title": "Uptime",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "yesoreyeram-infinity-datasource",
+        "uid": "bfkz8klh3klc0a"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "fillOpacity": 12,
+            "gradientMode": "opacity",
+            "lineWidth": 2,
+            "spanNulls": true,
+            "pointSize": 0,
+            "showPoints": "never"
+          }
+        }
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 0,
+        "y": 4
+      },
+      "id": 5,
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "targets": [
+        {
+          "columns": [
+            {
+              "selector": "t",
+              "text": "Time",
+              "type": "timestamp"
+            },
+            {
+              "selector": "v",
+              "text": "TAG_1",
+              "type": "number"
+            }
+          ],
+          "filters": [],
+          "format": "timeseries",
+          "refId": "A",
+          "parser": "backend",
+          "root_selector": "data",
+          "source": "url",
+          "type": "json",
+          "url": "http://localhost:5000/api/read/points?tag=Simulations.Simulator%201.TAG_1\u0026from=${__from:date:iso}\u0026to=${__to:date:iso}\u0026maxValues=5000",
+          "url_options": {
+            "data": "",
+            "method": "GET"
+          }
+        }
+      ],
+      "title": "TAG_1",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "yesoreyeram-infinity-datasource",
+        "uid": "bfkz8klh3klc0a"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "fillOpacity": 12,
+            "gradientMode": "opacity",
+            "lineWidth": 2,
+            "spanNulls": true,
+            "pointSize": 0,
+            "showPoints": "never"
+          }
+        }
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 12,
+        "y": 4
+      },
+      "id": 6,
+      "targets": [
+        {
+          "columns": [
+            {
+              "selector": "t",
+              "text": "Time",
+              "type": "timestamp"
+            },
+            {
+              "selector": "v",
+              "text": "TAG_2",
+              "type": "number"
+            }
+          ],
+          "filters": [],
+          "format": "timeseries",
+          "refId": "A",
+          "parser": "backend",
+          "root_selector": "data",
+          "source": "url",
+          "type": "json",
+          "url": "http://localhost:5000/api/read/points?tag=Simulations.Simulator%201.TAG_2\u0026from=${__from:date:iso}\u0026to=${__to:date:iso}\u0026maxValues=5000",
+          "url_options": {
+            "data": "",
+            "method": "GET"
+          }
+        }
+      ],
+      "title": "TAG_2",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "yesoreyeram-infinity-datasource",
+        "uid": "bfkz8klh3klc0a"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "fillOpacity": 12,
+            "gradientMode": "opacity",
+            "lineWidth": 2,
+            "spanNulls": true,
+            "pointSize": 0,
+            "showPoints": "never"
+          }
+        }
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 8,
+        "x": 0,
+        "y": 13
+      },
+      "id": 7,
+      "targets": [
+        {
+          "columns": [
+            {
+              "selector": "t",
+              "text": "Time",
+              "type": "timestamp"
+            },
+            {
+              "selector": "v",
+              "text": "TAG_3",
+              "type": "number"
+            }
+          ],
+          "filters": [],
+          "format": "timeseries",
+          "refId": "A",
+          "parser": "backend",
+          "root_selector": "data",
+          "source": "url",
+          "type": "json",
+          "url": "http://localhost:5000/api/read/points?tag=Simulations.Simulator%201.TAG_3\u0026from=${__from:date:iso}\u0026to=${__to:date:iso}\u0026maxValues=5000",
+          "url_options": {
+            "data": "",
+            "method": "GET"
+          }
+        }
+      ],
+      "title": "TAG_3",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "yesoreyeram-infinity-datasource",
+        "uid": "bfkz8klh3klc0a"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "fillOpacity": 12,
+            "gradientMode": "opacity",
+            "lineWidth": 2,
+            "spanNulls": true,
+            "pointSize": 0,
+            "showPoints": "never"
+          }
+        }
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 8,
+        "x": 8,
+        "y": 13
+      },
+      "id": 8,
+      "targets": [
+        {
+          "columns": [
+            {
+              "selector": "t",
+              "text": "Time",
+              "type": "timestamp"
+            },
+            {
+              "selector": "v",
+              "text": "TAG_4",
+              "type": "number"
+            }
+          ],
+          "filters": [],
+          "format": "timeseries",
+          "refId": "A",
+          "parser": "backend",
+          "root_selector": "data",
+          "source": "url",
+          "type": "json",
+          "url": "http://localhost:5000/api/read/points?tag=Simulations.Simulator%201.TAG_4\u0026from=${__from:date:iso}\u0026to=${__to:date:iso}\u0026maxValues=5000",
+          "url_options": {
+            "data": "",
+            "method": "GET"
+          }
+        }
+      ],
+      "title": "TAG_4",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "yesoreyeram-infinity-datasource",
+        "uid": "bfkz8klh3klc0a"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "fillOpacity": 12,
+            "gradientMode": "opacity",
+            "lineWidth": 2,
+            "spanNulls": true,
+            "pointSize": 0,
+            "showPoints": "never"
+          }
+        }
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 8,
+        "x": 16,
+        "y": 13
+      },
+      "id": 10,
+      "targets": [
+        {
+          "columns": [
+            {
+              "selector": "t",
+              "text": "Time",
+              "type": "timestamp"
+            },
+            {
+              "selector": "v",
+              "text": "TAG_5",
+              "type": "number"
+            }
+          ],
+          "filters": [],
+          "format": "timeseries",
+          "refId": "A",
+          "parser": "backend",
+          "root_selector": "data",
+          "source": "url",
+          "type": "json",
+          "url": "http://localhost:5000/api/read/points?tag=Simulations.Simulator%201.TAG_5\u0026from=${__from:date:iso}\u0026to=${__to:date:iso}\u0026maxValues=5000",
+          "url_options": {
+            "data": "",
+            "method": "GET"
+          }
+        }
+      ],
+      "title": "TAG_5",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "yesoreyeram-infinity-datasource",
+        "uid": "bfkz8klh3klc0a"
+      },
+      "fieldConfig": {
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "tag"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 360
+              },
+              {
+                "id": "displayName",
+                "value": "Tag"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "value"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 100
+              },
+              {
+                "id": "displayName",
+                "value": "Value"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "timestamp"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 220
+              },
+              {
+                "id": "displayName",
+                "value": "Timestamp"
+              },
+              {
+                "id": "unit",
+                "value": "dateTimeAsIso"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "quality"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 180
+              },
+              {
+                "id": "displayName",
+                "value": "Quality"
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 24,
+        "x": 0,
+        "y": 22
+      },
+      "id": 9,
+      "targets": [
+        {
+          "columns": [
+            {
+              "selector": "tag",
+              "text": "tag",
+              "type": "string"
+            },
+            {
+              "selector": "value",
+              "text": "value",
+              "type": "number"
+            },
+            {
+              "selector": "timestamp",
+              "text": "timestamp",
+              "type": "timestamp"
+            },
+            {
+              "selector": "quality",
+              "text": "quality",
+              "type": "string"
+            }
+          ],
+          "filters": [],
+          "format": "dataframe",
+          "refId": "A",
+          "parser": "backend",
+          "root_selector": "data",
+          "source": "url",
+          "type": "json",
+          "url": "http://localhost:5000/api/read/latest/table?tags=Simulations.Simulator%201.TAG_1%2CSimulations.Simulator%201.TAG_2%2CSimulations.Simulator%201.TAG_3%2CSimulations.Simulator%201.TAG_4%2CSimulations.Simulator%201.TAG_5%2CSimulations.Simulator%201.TAG_6%2CSimulations.Simulator%201.TAG_7%2CSimulations.Simulator%201.TAG_8\u0026lookbackMinutes=360",
+          "url_options": {
+            "data": "",
+            "method": "GET"
+          }
+        }
+      ],
+      "title": "Latest Values",
+      "type": "table"
+    }
+  ],
+  "refresh": "30s",
+  "schemaVersion": 38,
+  "tags": [
+    "opc",
+    "hda",
+    "kepware"
+  ],
+  "time": {
+    "from": "now-6h",
+    "to": "now"
+  },
+  "timezone": "browser",
+  "title": "OPC HDA Historian",
+  "uid": "opc-hda-historian",
+  "version": 8
+}

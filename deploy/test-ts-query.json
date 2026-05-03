@@ -1,0 +1,19 @@
+{
+  "queries": [{
+    "refId": "A",
+    "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "bfkz8klh3klc0a" },
+    "type": "json",
+    "source": "url",
+    "format": "dataframe",
+    "url": "http://localhost:5000/api/read/raw?tags=Simulations.Simulator%201.TAG_1&from=2026-05-03T18:00:00Z&to=2026-05-03T20:00:00Z&maxValues=50",
+    "root_selector": "data.0.points",
+    "columns": [
+      { "selector": "t", "text": "Time", "type": "timestamp" },
+      { "selector": "v", "text": "TAG_1", "type": "number" }
+    ],
+    "url_options": { "method": "GET", "data": "" },
+    "filters": []
+  }],
+  "from": "now-2h",
+  "to": "now"
+}
