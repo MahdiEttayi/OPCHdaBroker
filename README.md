@@ -2,8 +2,7 @@
 
 A stateless RESTful proxy that translates HTTP requests into OPC HDA COM calls against **KepServerEX 6 Local Historian** (.TSD/.Active files). Designed for IT consumption by Power BI, Grafana, custom dashboards, and any HTTP client.
 
-## Status: ✅ Operational
-
+## Status: What Works
 | Feature | Status |
 |---|---|
 | Server Connection | ✅ `Operational` (KepServerEX 6.6.350) |
