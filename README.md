@@ -61,7 +61,7 @@ Invoke-RestMethod "http://localhost:5000/api/read/latest?tags=Simulations.Simula
                                        │  │ .TSD / .Active      │  │
                                        │  └─────────────────────┘  │
                                        └───────────────────────────┘
-                                       Search to be done : How to secure the kepserver Ex 6 FILES form public accessing ><<>> 
+                                       
 ```
 
 ## API Endpoints
