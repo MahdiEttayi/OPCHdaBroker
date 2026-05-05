@@ -1,29 +1,86 @@
-# Build outputs
-bin/
-obj/
+## ═══════════════════════════════════════════════════════════════════
+## OPC HDA Broker — .gitignore
+## Based on: https://github.com/github/gitignore/blob/main/Dotnet.gitignore
+## ═══════════════════════════════════════════════════════════════════
+
+# ── Build results ────────────────────────────────────────────────
+[Dd]ebug/
+[Dd]ebugPublic/
+[Rr]elease/
+[Rr]eleases/
+x64/
+x86/
+[Ww][Ii][Nn]32/
+[Aa][Rr][Mm]/
+[Aa][Rr][Mm]64/
+bld/
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+[Ll]ogs/
+
+# ── .NET / NuGet ─────────────────────────────────────────────────
+project.lock.json
+project.fragment.lock.json
+artifacts/
+*.nupkg
+*.snupkg
+
+# ── MSBuild ──────────────────────────────────────────────────────
+*.binlog
+[Bb]uild[Ll]og.*
+
+# ── Test results ─────────────────────────────────────────────────
+[Tt]est[Rr]esult*/
+*.VisualState.xml
+TestResult.xml
+nunit-*.xml
+CodeCoverage/
+
+# ── IDE / Editor ─────────────────────────────────────────────────
+.vs/
+*.sln.docstates
+*.suo
+*.user
+*.userosscache
+*.sln.ide/
+.idea/
+*.swp
+*.swo
+*~
+~$*
+
+# ── Compiled binaries ────────────────────────────────────────────
 *.exe
 *.dll
 *.pdb
 *.cache
-*.user
-*.suo
 
-# IDE
-.vs/
-*.sln.docstates
+# ── Environment ──────────────────────────────────────────────────
+.env
+*.local
 
-# Logs
-logs/
-*.log
-
-# SDK / third-party binaries (keep lib/ tracked for SDK DLL)
-opc-core-components-3.00.105-release-/
-
-# OS
+# ── OS artifacts ─────────────────────────────────────────────────
 Thumbs.db
 Desktop.ini
 .DS_Store
+ehthumbs.db
 
-# Temp
+# ── Temp / Backup ────────────────────────────────────────────────
 *.tmp
 *.bak
+*.orig
+
+# ── ASP.NET ──────────────────────────────────────────────────────
+ScaffoldingReadMe.txt
+
+# ══════════════════════════════════════════════════════════════════
+# PROJECT-SPECIFIC RULES
+# ══════════════════════════════════════════════════════════════════
+
+# Keep the SDK DLL tracked (override the *.dll rule above)
+!lib/
+!lib/**
+
+# Exclude extracted OPC Foundation SDK installer files
+opc-core-components-3.00.105-release-/
