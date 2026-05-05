@@ -247,7 +247,7 @@ grafana cli --pluginsDir "C:\Users\$env:USERNAME\grafana-plugins" plugins instal
 **`custom.ini`** contents:
 ```ini
 [paths]
-plugins = C:\Users\Admin\grafana-plugins
+plugins = C:\Users\USERNAME\grafana-plugins
 
 [plugins]
 allow_loading_unsigned_plugins = yesoreyeram-infinity-datasource
@@ -257,14 +257,14 @@ allow_loading_unsigned_plugins = yesoreyeram-infinity-datasource
 # 5. Restart Grafana to load the plugin
 Restart-Service grafana
 
-# 6. Import the dashboard via API
+# 6. Import the dashboard via API (Made using JSON)
 $cred = [Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes("admin:admin"))
 $headers = @{ Authorization = "Basic $cred"; "Content-Type" = "application/json" }
 $body = Get-Content "deploy\grafana-dashboard.json" -Raw
 Invoke-RestMethod "http://localhost:3000/api/dashboards/db" -Method POST -Headers $headers -Body $body
 ```
 
-### Dashboard Panels
+### Dashboard Panels Examples:
 
 | Panel | Type | Broker Endpoint | What it shows |
 |---|---|---|---|
@@ -355,3 +355,5 @@ The broker uses the Technosoftware `OpcClientSdk472.dll` (placed in `lib/`). All
 ### Known Limitations
 - **SDK Browse Depth**: The SDK's `ITsCHdaBrowser.Browse()` can navigate 1-2 levels but fails at deeper levels with `E_INVALIDARG` on `ChangeBrowsePosition`. This is a KepServerEX HDA browsing limitation — TSD auto-discovery compensates for this.
 - **Tag Path Format**: Tags use the `Channel.Device.Tag` dotted notation (e.g., `Simulations.Simulator 1.TAG_1`).
+
+### END OF THE DOCUMENT!
