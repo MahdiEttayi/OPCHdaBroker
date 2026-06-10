@@ -84,3 +84,10 @@ ScaffoldingReadMe.txt
 
 # Exclude extracted OPC Foundation SDK installer files
 opc-core-components-3.00.105-release-/
+
+# Local tool config (per-developer, not project files)
+.claude/
+.opencode/
+
+# App.config contains connection strings with secrets; use App.config.example as template
+App.config

@@ -5,9 +5,10 @@
     <add key="Hda.PrimaryUrl"  value="opchda://localhost/Kepware.KEPServerEX_HDA.V6" />
     <add key="Hda.FallbackUrl" value="opchda://127.0.0.1/Kepware.KEPServerEX_HDA.V6" />
 
+    <!-- ── TSD Datastore Path (for auto-discovery of historian tags) ── -->
+    <add key="Hda.TsdDataPath" value="C:\ProgramData\Kepware\KEPServerEX\V6\Historical Data" />
+
     <!-- ── REST API ──────────────────────────────────────────────── -->
-    <!-- Use "http://localhost:5000" for console mode                -->
-    <!-- Use "http://+:5000" for Windows Service (listens on all IPs) -->
     <add key="Api.BaseUrl"          value="http://localhost:5000" />
     <add key="Api.DefaultMaxValues" value="10000" />
     <add key="Api.AbsoluteMaxValues" value="100000" />
@@ -19,6 +20,22 @@
     <!-- ── Logging ───────────────────────────────────────────────── -->
     <add key="Log.Level"    value="Debug" />
     <add key="Log.FilePath" value="logs\broker-.log" />
+
+    <!-- ── TimescaleDB (REPLACE with your actual connection) ─────── -->
+    <add key="Tsdb.ConnectionString" value="Host=localhost;Port=5432;Database=hda;Username=postgres;Password=your_password_here" />
+
+    <!-- ── Ingestion ─────────────────────────────────────────────── -->
+    <add key="Ingestion.BrokerId" value="kepserver01" />
+
+    <!-- ── Backfill ────────────────────────────────────────────── -->
+    <add key="Backfill.Enabled" value="false" />
+    <add key="Backfill.AutoStart" value="false" />
+    <add key="Backfill.StartDate" value="2024-01-01T00:00:00Z" />
+    <add key="Backfill.EndDate" value="2026-05-01T00:00:00Z" />
+    <add key="Backfill.ChunkDays" value="30" />
+    <add key="Backfill.MaxPointsPerCall" value="50000" />
+    <add key="Backfill.BatchSize" value="500" />
+    <add key="Backfill.PauseBetweenChunksMs" value="500" />
   </appSettings>
 
   <runtime>
