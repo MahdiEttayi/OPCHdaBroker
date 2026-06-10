@@ -269,23 +269,31 @@ namespace OpcHdaBroker.Api.Controllers
         /// one row per tag — so Infinity can use simple selectors without
         /// needing nested array-index notation.
         ///
-        /// Example:
-        ///   GET /api/read/latest/table?tags=TAG_1,TAG_2&amp;lookbackMinutes=120
+        /// Infinity sends repeated &amp;tags= params (not comma-separated), so
+        /// this endpoint accepts both formats:
+        ///   GET /api/read/latest/table?tags=TAG_1,TAG_2
+        ///   GET /api/read/latest/table?tags=TAG_1&amp;tags=TAG_2
         /// </summary>
         [HttpGet]
         [Route("latest/table")]
         public async Task<IHttpActionResult> ReadLatestTable(
-            [FromUri] string tags,
-            [FromUri] int    lookbackMinutes = 120)
+            [FromUri] string[] tags,
+            [FromUri] int      lookbackMinutes = 120)
         {
             var sw = Stopwatch.StartNew();
 
-            if (string.IsNullOrWhiteSpace(tags))
+            if (tags == null || tags.Length == 0)
                 return BadRequest("'tags' parameter is required");
 
-            var tagList = tags.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries)
-                              .Select(t => t.Trim())
-                              .ToList();
+            var tagList = tags
+                .Where(t => t != null)
+                .SelectMany(t => t.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries))
+                .Select(t => t.Trim())
+                .Where(t => t.Length > 0)
+                .ToList();
+
+            if (tagList.Count == 0)
+                return BadRequest("'tags' parameter is required");
 
             try
             {

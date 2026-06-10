@@ -10,10 +10,6 @@ using System.Collections.Concurrent;
 
 namespace OpcHdaBroker.Cache
 {
-    /// <summary>
-    /// Thread-safe in-memory cache with per-entry TTL expiration.
-    /// Used to avoid re-browsing the tag namespace on every request.
-    /// </summary>
     public class MemoryCache
     {
         private readonly ConcurrentDictionary<string, CacheEntry> _store
@@ -25,36 +21,30 @@ namespace OpcHdaBroker.Cache
             public DateTime ExpiresAt { get; set; }
         }
 
-        /// <summary>
-        /// Get a cached value, or compute and cache it if missing/expired.
-        /// </summary>
         public T GetOrAdd<T>(string key, Func<T> factory, TimeSpan ttl)
         {
-            if (_store.TryGetValue(key, out var entry) && DateTime.UtcNow < entry.ExpiresAt)
-            {
-                return (T)entry.Value;
-            }
-
-            T value = factory();
-            _store[key] = new CacheEntry
-            {
-                Value     = value,
-                ExpiresAt = DateTime.UtcNow.Add(ttl)
-            };
-            return value;
+            var lazy = new Lazy<T>(factory);
+            var entry = _store.AddOrUpdate(key,
+                _ => new CacheEntry
+                {
+                    Value     = lazy.Value,
+                    ExpiresAt = DateTime.UtcNow.Add(ttl)
+                },
+                (_, existing) => DateTime.UtcNow < existing.ExpiresAt
+                    ? existing
+                    : new CacheEntry
+                    {
+                        Value     = lazy.Value,
+                        ExpiresAt = DateTime.UtcNow.Add(ttl)
+                    });
+            return (T)entry.Value;
         }
 
-        /// <summary>
-        /// Invalidate a specific cache entry.
-        /// </summary>
         public void Invalidate(string key)
         {
             _store.TryRemove(key, out _);
         }
 
-        /// <summary>
-        /// Clear all cached entries.
-        /// </summary>
         public void Clear()
         {
             _store.Clear();

@@ -1,0 +1,683 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OPC HDA Broker - Data Model Slides</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10.6.1/dist/mermaid.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #0a0a1a;
+            color: #fff;
+            overflow: hidden;
+        }
+
+        .slides-container {
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+        }
+
+        .slide {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            padding: 60px 80px;
+            display: none;
+            flex-direction: column;
+            background: linear-gradient(135deg, #0a0a1a 0%, #1a1a2e 50%, #16213e 100%);
+            opacity: 0;
+            transition: opacity 0.5s ease;
+        }
+
+        .slide.active {
+            display: flex;
+            opacity: 1;
+        }
+
+        .slide-header {
+            border-bottom: 2px solid #00d4ff;
+            padding-bottom: 20px;
+            margin-bottom: 40px;
+        }
+
+        .slide-header h1 {
+            font-size: 2.2em;
+            color: #00d4ff;
+            margin-bottom: 5px;
+        }
+
+        .slide-header .slide-number {
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .slide-content {
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        .slide-content h2 {
+            color: #00d4ff;
+            font-size: 1.5em;
+            margin: 20px 0 15px 0;
+        }
+
+        .slide-content p {
+            color: #aaa;
+            line-height: 1.6;
+            margin-bottom: 15px;
+        }
+
+        .diagram-container {
+            background: #fff;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 15px 0;
+            max-height: 400px;
+            overflow: auto;
+        }
+
+        .diagram-container svg {
+            max-width: 100%;
+            height: auto;
+        }
+
+        .card-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+            margin: 15px 0;
+        }
+
+        .card {
+            background: rgba(255,255,255,0.05);
+            border-radius: 10px;
+            padding: 20px;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .card h3 {
+            color: #00d4ff;
+            margin-bottom: 15px;
+            font-size: 1.1em;
+        }
+
+        .property-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9em;
+        }
+
+        .property-table th,
+        .property-table td {
+            padding: 8px 10px;
+            text-align: left;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .property-table th {
+            background: rgba(0,212,255,0.15);
+            color: #00d4ff;
+        }
+
+        .type-badge {
+            display: inline-block;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.8em;
+            font-family: 'Consolas', monospace;
+        }
+
+        .type-badge.string { background: #FF9800; color: #000; }
+        .type-badge.datetime { background: #9C27B0; color: #fff; }
+        .type-badge.number { background: #4CAF50; color: #fff; }
+        .type-badge.bool { background: #00BCD4; color: #000; }
+
+        .flow-box {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 30px;
+            margin: 30px 0;
+        }
+
+        .flow-step {
+            background: rgba(0,212,255,0.1);
+            border: 2px solid #00d4ff;
+            border-radius: 15px;
+            padding: 20px 30px;
+            text-align: center;
+            min-width: 150px;
+        }
+
+        .flow-step h4 {
+            color: #00d4ff;
+            font-size: 1em;
+            margin-bottom: 10px;
+        }
+
+        .flow-step p {
+            color: #888;
+            font-size: 0.85em;
+            margin: 0;
+        }
+
+        .flow-arrow {
+            color: #00d4ff;
+            font-size: 2em;
+        }
+
+        /* Navigation */
+        .nav {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 15px;
+            z-index: 100;
+        }
+
+        .nav button {
+            background: rgba(0,212,255,0.2);
+            border: 1px solid #00d4ff;
+            color: #00d4ff;
+            padding: 12px 25px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 1em;
+            transition: all 0.3s ease;
+        }
+
+        .nav button:hover {
+            background: #00d4ff;
+            color: #000;
+        }
+
+        .nav button:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+
+        .progress-bar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            height: 4px;
+            background: #00d4ff;
+            transition: width 0.3s ease;
+        }
+
+        .slide-counter {
+            position: fixed;
+            top: 20px;
+            right: 30px;
+            color: #666;
+            font-size: 0.9em;
+        }
+
+        .title-slide {
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+        }
+
+        .title-slide h1 {
+            font-size: 3em;
+            color: #00d4ff;
+            margin-bottom: 20px;
+        }
+
+        .title-slide p {
+            font-size: 1.3em;
+            color: #888;
+        }
+
+        .title-slide .subtitle {
+            margin-top: 40px;
+            font-size: 1em;
+            color: #666;
+        }
+
+        .highlight-box {
+            background: rgba(0,212,255,0.1);
+            border-left: 4px solid #00d4ff;
+            padding: 15px 20px;
+            margin: 15px 0;
+        }
+
+        .two-column {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 40px;
+        }
+    </style>
+</head>
+<body>
+    <div class="slides-container">
+        <!-- Slide 1: Title -->
+        <div class="slide active title-slide">
+            <h1>OPC HDA Broker</h1>
+            <p>Unified Data Model</p>
+            <div class="subtitle">Program (C#) ↔ Database (TimescaleDB)</div>
+        </div>
+
+        <!-- Slide 2: Overview -->
+        <div class="slide">
+            <div class="slide-header">
+                <h1>Overview</h1>
+                <span class="slide-number">Slide 2 of 10</span>
+            </div>
+            <div class="slide-content">
+                <h2>What is this Data Model?</h2>
+                <p>This document presents a unified view of the OPC HDA Broker's data architecture, combining:</p>
+                <div class="highlight-box">
+                    <strong>Program Phase:</strong> C# classes that handle OPC HDA data in memory
+                </div>
+                <div class="highlight-box">
+                    <strong>Database Phase:</strong> TimescaleDB schema for persistent storage
+                </div>
+                <h2>Key Components</h2>
+                <div class="card-grid">
+                    <div class="card">
+                        <h3>TsdbDataPoint</h3>
+                        <p>Core data transfer class</p>
+                    </div>
+                    <div class="card">
+                        <h3>BackfillService</h3>
+                        <p>Historical data import</p>
+                    </div>
+                    <div class="card">
+                        <h3>TsdbRepository</h3>
+                        <p>Database operations</p>
+                    </div>
+                    <div class="card">
+                        <h3>hda_data</h3>
+                        <p>TimescaleDB hypertable</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 3: Class Diagram -->
+        <div class="slide">
+            <div class="slide-header">
+                <h1>Program Class Model</h1>
+                <span class="slide-number">Slide 3 of 10</span>
+            </div>
+            <div class="slide-content">
+                <div class="diagram-container">
+                    <div class="mermaid">
+                        classDiagram
+                            class TsdbDataPoint {
+                                +DateTime Timestamp
+                                +string Tag
+                                +double? Value
+                                +string ValueText
+                                +string Quality
+                                +string BrokerId
+                                +string ValueType
+                            }
+
+                            class BackfillConfig {
+                                +bool Enabled
+                                +DateTime StartDate
+                                +DateTime EndDate
+                                +int ChunkDays
+                                +FromAppSettings() BackfillConfig
+                            }
+
+                            class BackfillStatus {
+                                +bool IsRunning
+                                +bool IsPaused
+                                +long TotalPoints
+                                +double ProgressPct
+                                +string State
+                            }
+
+                            class TimeSeriesPoint {
+                                +DateTime Timestamp
+                                +object Value
+                                +string Quality
+                                +bool IsGood
+                            }
+
+                            class BackfillService {
+                                +Status BackfillStatus
+                                +StartAsync() void
+                                +Pause() void
+                                +Resume() void
+                                +Stop() void
+                            }
+
+                            BackfillService --> BackfillConfig
+                            BackfillService --> BackfillStatus
+                            BackfillService --> TimeSeriesPoint
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 4: Database Schema -->
+        <div class="slide">
+            <div class="slide-header">
+                <h1>Database Schema</h1>
+                <span class="slide-number">Slide 4 of 10</span>
+            </div>
+            <div class="slide-content">
+                <h2>TimescaleDB: hda_data Table</h2>
+                <table class="property-table">
+                    <tr><th>Column</th><th>Type</th><th>Constraints</th><th>Description</th></tr>
+                    <tr><td>time</td><td><span class="type-badge datetime">TIMESTAMPTZ</span></td><td>NOT NULL, PK</td><td>UTC timestamp</td></tr>
+                    <tr><td>tag</td><td><span class="type-badge string">TEXT</span></td><td>NOT NULL, PK</td><td>OPC tag path</td></tr>
+                    <tr><td>value</td><td><span class="type-badge number">DOUBLE PRECISION</span></td><td>NULL</td><td>Numeric value</td></tr>
+                    <tr><td>value_text</td><td><span class="type-badge string">TEXT</span></td><td>NULL</td><td>String value</td></tr>
+                    <tr><td>quality</td><td><span class="type-badge string">TEXT</span></td><td>NULL</td><td>OPC quality</td></tr>
+                    <tr><td>broker_id</td><td><span class="type-badge string">TEXT</span></td><td>NULL</td><td>Broker identifier</td></tr>
+                    <tr><td>value_type</td><td><span class="type-badge string">TEXT</span></td><td>NULL</td><td>Type hint</td></tr>
+                </table>
+                <div class="highlight-box" style="margin-top: 20px;">
+                    <strong>TimescaleDB Features:</strong> Hypertable with 1-day chunks, automatic time partitioning
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 5: Data Flow -->
+        <div class="slide">
+            <div class="slide-header">
+                <h1>Data Flow</h1>
+                <span class="slide-number">Slide 5 of 10</span>
+            </div>
+            <div class="slide-content">
+                <h2>KepServerEX → Broker → TimescaleDB</h2>
+                <div class="flow-box">
+                    <div class="flow-step">
+                        <h4>KepServerEX</h4>
+                        <p>OPC HDA COM</p>
+                    </div>
+                    <span class="flow-arrow">→</span>
+                    <div class="flow-step">
+                        <h4>HdaReader</h4>
+                        <p>ReadRaw()</p>
+                    </div>
+                    <span class="flow-arrow">→</span>
+                    <div class="flow-step">
+                        <h4>BackfillService</h4>
+                        <p>Convert + Batch</p>
+                    </div>
+                    <span class="flow-arrow">→</span>
+                    <div class="flow-step">
+                        <h4>TsdbRepository</h4>
+                        <p>BulkUpsert()</p>
+                    </div>
+                    <span class="flow-arrow">→</span>
+                    <div class="flow-step">
+                        <h4>hda_data</h4>
+                        <p>Hypertable</p>
+                    </div>
+                </div>
+                <div class="diagram-container" style="margin-top: 30px;">
+                    <div class="mermaid">
+                        flowchart LR
+                            A[KepServerEX] --> B[HdaReader]
+                            B --> C[BackfillService]
+                            C --> D[TsdbRepository]
+                            D --> E[hda_data]
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 6: TsdbDataPoint Detail -->
+        <div class="slide">
+            <div class="slide-header">
+                <h1>TsdbDataPoint Class</h1>
+                <span class="slide-number">Slide 6 of 10</span>
+            </div>
+            <div class="slide-content">
+                <h2>Core Data Transfer Class</h2>
+                <p>Represents a single time-series data point ready for TimescaleDB insertion.</p>
+                <div class="two-column">
+                    <div class="card">
+                        <h3>Properties</h3>
+                        <table class="property-table">
+                            <tr><th>Property</th><th>Type</th></tr>
+                            <tr><td>Timestamp</td><td><span class="type-badge datetime">DateTime</span></td></tr>
+                            <tr><td>Tag</td><td><span class="type-badge string">string</span></td></tr>
+                            <tr><td>Value</td><td><span class="type-badge number">double?</span></td></tr>
+                            <tr><td>ValueText</td><td><span class="type-badge string">string</span></td></tr>
+                            <tr><td>Quality</td><td><span class="type-badge string">string</span></td></tr>
+                            <tr><td>BrokerId</td><td><span class="type-badge string">string</span></td></tr>
+                            <tr><td>ValueType</td><td><span class="type-badge string">string</span></td></tr>
+                        </table>
+                    </div>
+                    <div class="card">
+                        <h3>ValueType Options</h3>
+                        <table class="property-table">
+                            <tr><th>Type</th><th>Description</th></tr>
+                            <tr><td><span class="type-badge string">double</span></td><td>Standard numeric</td></tr>
+                            <tr><td><span class="type-badge string">float</span></td><td>Float precision</td></tr>
+                            <tr><td><span class="type-badge string">int</span></td><td>Integer value</td></tr>
+                            <tr><td><span class="type-badge string">long</span></td><td>Long integer</td></tr>
+                            <tr><td><span class="type-badge string">string</span></td><td>Text value</td></tr>
+                            <tr><td><span class="type-badge string">parsed</span></td><td>Parsed from string</td></tr>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 7: Mapping -->
+        <div class="slide">
+            <div class="slide-header">
+                <h1>Program ↔ Database Mapping</h1>
+                <span class="slide-number">Slide 7 of 10</span>
+            </div>
+            <div class="slide-content">
+                <h2>How C# Maps to SQL</h2>
+                <div class="two-column">
+                    <div class="card">
+                        <h3>C# (TsdbDataPoint)</h3>
+                        <table class="property-table">
+                            <tr><th>C# Property</th><th>Type</th></tr>
+                            <tr><td>Timestamp</td><td>DateTime</td></tr>
+                            <tr><td>Tag</td><td>string</td></tr>
+                            <tr><td>Value</td><td>double?</td></tr>
+                            <tr><td>ValueText</td><td>string</td></tr>
+                            <tr><td>Quality</td><td>string</td></tr>
+                            <tr><td>BrokerId</td><td>string</td></tr>
+                            <tr><td>ValueType</td><td>string</td></tr>
+                        </table>
+                    </div>
+                    <div class="card">
+                        <h3>SQL (hda_data)</h3>
+                        <table class="property-table">
+                            <tr><th>Column</th><th>Type</th></tr>
+                            <tr><td>time</td><td>TIMESTAMPTZ</td></tr>
+                            <tr><td>tag</td><td>TEXT</td></tr>
+                            <tr><td>value</td><td>DOUBLE PRECISION</td></tr>
+                            <tr><td>value_text</td><td>TEXT</td></tr>
+                            <tr><td>quality</td><td>TEXT</td></tr>
+                            <tr><td>broker_id</td><td>TEXT</td></tr>
+                            <tr><td>value_type</td><td>TEXT</td></tr>
+                        </table>
+                    </div>
+                </div>
+                <div class="highlight-box">
+                    <strong>Note:</strong> Timestamp uses DateTime.SpecifyKind(ts, DateTimeKind.Utc) to ensure proper UTC handling
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 8: Backfill Service -->
+        <div class="slide">
+            <div class="slide-header">
+                <h1>Backfill Service</h1>
+                <span class="slide-number">Slide 8 of 10</span>
+            </div>
+            <div class="slide-content">
+                <h2>Historical Data Import</h2>
+                <div class="two-column">
+                    <div class="card">
+                        <h3>BackfillConfig</h3>
+                        <table class="property-table">
+                            <tr><th>Property</th><th>Default</th></tr>
+                            <tr><td>Enabled</td><td>false</td></tr>
+                            <tr><td>StartDate</td><td>1 year ago</td></tr>
+                            <tr><td>EndDate</td><td>now</td></tr>
+                            <tr><td>ChunkDays</td><td>30</td></tr>
+                            <tr><td>BatchSize</td><td>500</td></tr>
+                            <tr><td>AutoStart</td><td>false</td></tr>
+                        </table>
+                    </div>
+                    <div class="card">
+                        <h3>BackfillStatus</h3>
+                        <table class="property-table">
+                            <tr><th>Property</th><th>Description</th></tr>
+                            <tr><td>IsRunning</td><td>Active state</td></tr>
+                            <tr><td>IsPaused</td><td>Paused state</td></tr>
+                            <tr><td>TotalPoints</td><td>Points written</td></tr>
+                            <tr><td>ProgressPct</td><td>0-100%</td></tr>
+                            <tr><td>State</td><td>Current status</td></tr>
+                            <tr><td>Elapsed</td><td>Run duration</td></tr>
+                        </table>
+                    </div>
+                </div>
+                <h2 style="margin-top: 20px;">Operations</h2>
+                <p><strong>StartAsync()</strong> - Run on ThreadPool | <strong>Pause()</strong> / <strong>Resume()</strong> - Control flow | <strong>Stop()</strong> - Cancel</p>
+            </div>
+        </div>
+
+        <!-- Slide 9: Configuration -->
+        <div class="slide">
+            <div class="slide-header">
+                <h1>App.config Settings</h1>
+                <span class="slide-number">Slide 9 of 10</span>
+            </div>
+            <div class="slide-content">
+                <h2>Configuration Keys</h2>
+                <div class="card-grid">
+                    <div class="card">
+                        <h3>TimescaleDB Connection</h3>
+                        <table class="property-table">
+                            <tr><th>Key</th><th>Example</th></tr>
+                            <tr><td>Tsdb.ConnectionString</td><td>Host=localhost;Port=5432;Database=hda;Username=postgres;Password=admin123</td></tr>
+                            <tr><td>Ingestion.BrokerId</td><td>kepserver01</td></tr>
+                        </table>
+                    </div>
+                    <div class="card">
+                        <h3>Backfill Settings</h3>
+                        <table class="property-table">
+                            <tr><th>Key</th><th>Example</th></tr>
+                            <tr><td>Backfill.Enabled</td><td>false</td></tr>
+                            <tr><td>Backfill.StartDate</td><td>2024-01-01T00:00:00Z</td></tr>
+                            <tr><td>Backfill.EndDate</td><td>2026-05-01T00:00:00Z</td></tr>
+                            <tr><td>Backfill.ChunkDays</td><td>30</td></tr>
+                            <tr><td>Backfill.AutoStart</td><td>false</td></tr>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 10: Summary -->
+        <div class="slide">
+            <div class="slide-header">
+                <h1>Summary</h1>
+                <span class="slide-number">Slide 10 of 10</span>
+            </div>
+            <div class="slide-content">
+                <h2>Key Takeaways</h2>
+                <div class="highlight-box">
+                    1. <strong>TsdbDataPoint</strong> bridges OPC HDA data to TimescaleDB
+                </div>
+                <div class="highlight-box">
+                    2. <strong>BackfillService</strong> handles historical data import in configurable chunks
+                </div>
+                <div class="highlight-box">
+                    3. <strong>hda_data</strong> hypertable provides time-series optimized storage
+                </div>
+                <div class="highlight-box">
+                    4. Primary key on (time, tag) enables deduplication via ON CONFLICT DO NOTHING
+                </div>
+                <div class="highlight-box">
+                    5. TimescaleDB's automatic chunking ensures efficient queries on large datasets
+                </div>
+                <h2 style="margin-top: 30px;">Next Steps</h2>
+                <p>• Configure App.config with your PostgreSQL connection string</p>
+                <p>• Enable TimescaleDB extension in PostgreSQL</p>
+                <p>• Start the broker and trigger backfill via REST API</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Navigation -->
+    <div class="nav">
+        <button id="prevBtn" onclick="prevSlide()">← Previous</button>
+        <button id="nextBtn" onclick="nextSlide()">Next →</button>
+    </div>
+    <div class="progress-bar" id="progressBar"></div>
+    <div class="slide-counter" id="slideCounter">1 / 10</div>
+
+    <script>
+        let currentSlide = 0;
+        const slides = document.querySelectorAll('.slide');
+        const totalSlides = slides.length;
+
+        function showSlide(index) {
+            slides.forEach((slide, i) => {
+                slide.classList.remove('active');
+                if (i === index) {
+                    slide.classList.add('active');
+                }
+            });
+
+            document.getElementById('slideCounter').textContent = `${index + 1} / ${totalSlides}`;
+            document.getElementById('progressBar').style.width = `${((index + 1) / totalSlides) * 100}%`;
+
+            document.getElementById('prevBtn').disabled = index === 0;
+            document.getElementById('nextBtn').disabled = index === totalSlides - 1;
+        }
+
+        function nextSlide() {
+            if (currentSlide < totalSlides - 1) {
+                currentSlide++;
+                showSlide(currentSlide);
+            }
+        }
+
+        function prevSlide() {
+            if (currentSlide > 0) {
+                currentSlide--;
+                showSlide(currentSlide);
+            }
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowRight' || e.key === ' ') {
+                nextSlide();
+            } else if (e.key === 'ArrowLeft') {
+                prevSlide();
+            }
+        });
+
+        showSlide(0);
+
+        mermaid.initialize({
+            startOnLoad: true,
+            theme: 'default',
+            securityLevel: 'loose'
+        });
+    </script>
+</body>
+</html>

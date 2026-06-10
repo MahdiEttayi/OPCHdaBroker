@@ -9,9 +9,12 @@
 using System;
 using System.Collections.Generic;
 using System.Configuration;
+using System.Threading;
 using System.Threading.Tasks;
 using OpcHdaBroker.Api.Controllers;
+using OpcHdaBroker.Api.Models;
 using OpcHdaBroker.ComInterop;
+using OpcHdaBroker.TimescaleDb;
 using Serilog;
 
 namespace OpcHdaBroker
@@ -29,6 +32,12 @@ namespace OpcHdaBroker
         private static HdaBrowser           _browser;
         private static HdaReader            _reader;
         private static DateTime             _startedAt;
+        private static List<string>         _discoveredTags;
+
+        // ── TimescaleDB components ────────────────────────────────────────
+        private static TsdbRepository      _tsdb;
+        private static BackfillService      _backfill;
+        private static BackfillConfig       _backfillConfig;
 
         // ── Public accessors ─────────────────────────────────────────────
         public static Cache.MemoryCache Cache { get; } = new Cache.MemoryCache();
@@ -66,10 +75,58 @@ namespace OpcHdaBroker
             _reader  = new HdaReader(_connection);
 
             // 4. Pre-warm the tag cache
-            var tags = _dispatcher.InvokeAsync(() => _browser.DiscoverAllTags()).Result;
-            Cache.GetOrAdd("tags", () => tags, TimeSpan.FromSeconds(60));
+            _discoveredTags = _dispatcher.InvokeAsync(() => _browser.DiscoverAllTags()).Result;
+            Cache.GetOrAdd("tags", () => _discoveredTags, TimeSpan.FromSeconds(60));
 
-            Log.Information("Broker engine initialized — {TagCount} tags discovered", tags.Count);
+            Log.Information("Broker engine initialized — {TagCount} tags discovered", _discoveredTags.Count);
+
+            // 5. Initialize TimescaleDB
+            InitializeTimescaleDb();
+        }
+
+        /// <summary>
+        /// Initialize TimescaleDB repository and optionally start backfill.
+        /// </summary>
+        private static void InitializeTimescaleDb()
+        {
+            string connString = ConfigurationManager.AppSettings["Tsdb.ConnectionString"];
+            string brokerId   = ConfigurationManager.AppSettings["Ingestion.BrokerId"] ?? "kepserver01";
+
+            if (string.IsNullOrWhiteSpace(connString))
+            {
+                Log.Warning("TimescaleDB connection string not configured — TSDB features disabled");
+                return;
+            }
+
+            try
+            {
+                _tsdb = new TsdbRepository(connString, brokerId);
+
+                if (!_tsdb.TestConnection())
+                {
+                    Log.Error("TimescaleDB connection failed — check connection string");
+                    return;
+                }
+
+                _tsdb.EnsureSchema();
+                Log.Information("TimescaleDB connected. Rows in DB: {Count}, Tags: {Tags}",
+                    _tsdb.GetRowCount(), _tsdb.GetTagCount());
+
+                // Load backfill config
+                _backfillConfig = BackfillConfig.FromAppSettings();
+                _backfill = new BackfillService(_tsdb, _backfillConfig, _reader, _discoveredTags);
+
+                // Auto-start backfill if configured
+                if (_backfillConfig.AutoStart && _backfillConfig.Enabled)
+                {
+                    Log.Information("Auto-starting backfill...");
+                    _backfill.StartAsync();
+                }
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "Failed to initialize TimescaleDB");
+            }
         }
 
         /// <summary>
@@ -80,6 +137,8 @@ namespace OpcHdaBroker
             Log.Information("Broker engine shutting down...");
             try
             {
+                _backfill?.Stop();
+                _tsdb?.Dispose();
                 _dispatcher?.InvokeAsync(() => _connection?.Disconnect()).Wait(TimeSpan.FromSeconds(5));
             }
             catch { /* best effort */ }
@@ -185,6 +244,122 @@ namespace OpcHdaBroker
                 var runner = new Diagnostics.DiagnosticRunner(_connection);
                 return runner.RunAll();
             });
+        }
+
+        // ══════════════════════════════════════════════════════════════════
+        // TIMESACALEDB / BACKFILL METHODS
+        // ══════════════════════════════════════════════════════════════════
+
+        public static bool IsTimescaleDbEnabled => _tsdb != null;
+
+        /// <summary>
+        /// Test TimescaleDB connection.
+        /// </summary>
+        public static TsdbStatusDto GetTimescaleDbStatus()
+        {
+            if (_tsdb == null)
+                return new TsdbStatusDto { Connected = false, Message = "Not configured" };
+
+            BackfillStatusDto backfillDto = null;
+            var backfillStatus = _backfill?.Status;
+            if (backfillStatus != null)
+            {
+                backfillDto = new BackfillStatusDto
+                {
+                    IsRunning           = backfillStatus.IsRunning,
+                    IsPaused            = backfillStatus.IsPaused,
+                    StartTime           = backfillStatus.StartTime,
+                    EndTime             = backfillStatus.EndTime,
+                    CurrentTime         = backfillStatus.CurrentTime,
+                    TotalPoints         = backfillStatus.TotalPoints,
+                    TagsProcessed       = backfillStatus.TagsProcessed,
+                    TotalTags           = backfillStatus.TotalTags > 0 ? backfillStatus.TotalTags : 0,
+                    State               = backfillStatus.State,
+                    ProgressPct         = backfillStatus.ProgressPct,
+                    EstimatedRemaining  = backfillStatus.EstimatedRemaining,
+                    Elapsed             = backfillStatus.Elapsed.ToString(@"d\.hh\:mm\:ss")
+                };
+            }
+
+            return new TsdbStatusDto
+            {
+                Connected      = _tsdb.TestConnection(),
+                RowCount      = _tsdb.GetRowCount(),
+                TagCount      = _tsdb.GetTagCount(),
+                OldestTime    = _tsdb.GetOldestTimestamp(),
+                NewestTime    = _tsdb.GetNewestTimestamp(),
+                Backfill      = backfillDto,
+                Message       = "Connected"
+            };
+        }
+
+        /// <summary>
+        /// Start the backfill.
+        /// </summary>
+        public static void StartBackfill()
+        {
+            if (_backfill == null)
+            {
+                Log.Warning("Backfill not available — TimescaleDB not configured");
+                return;
+            }
+            _backfill.StartAsync();
+        }
+
+        /// <summary>
+        /// Pause the backfill.
+        /// </summary>
+        public static void PauseBackfill()
+        {
+            _backfill?.Pause();
+        }
+
+        /// <summary>
+        /// Resume the backfill.
+        /// </summary>
+        public static void ResumeBackfill()
+        {
+            _backfill?.Resume();
+        }
+
+        /// <summary>
+        /// Stop the backfill.
+        /// </summary>
+        public static void StopBackfill()
+        {
+            _backfill?.Stop();
+        }
+
+        /// <summary>
+        /// Run backfill on a custom time range (blocking call).
+        /// </summary>
+        public static void RunBackfillRange(DateTime startDate, DateTime endDate)
+        {
+            if (_tsdb == null)
+            {
+                Log.Warning("TimescaleDB not configured");
+                return;
+            }
+
+            var customConfig = BackfillConfig.FromAppSettings();
+            customConfig.StartDate = startDate.ToUniversalTime();
+            customConfig.EndDate   = endDate.ToUniversalTime();
+
+            var customBackfill = new BackfillService(_tsdb, customConfig, _reader, _discoveredTags);
+            customBackfill.Run(CancellationToken.None);
+        }
+
+        /// <summary>
+        /// Truncate all data from TimescaleDB (dangerous).
+        /// </summary>
+        public static void TruncateTimescaleDb()
+        {
+            if (_tsdb == null)
+            {
+                Log.Warning("TimescaleDB not configured");
+                return;
+            }
+            _tsdb.TruncateData();
         }
 
         private static void EnsureConnected()

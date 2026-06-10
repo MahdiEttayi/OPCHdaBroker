@@ -77,4 +77,37 @@ namespace OpcHdaBroker.Api.Models
         public DateTime          BrokerStartedAt  { get; set; }
         public Dictionary<int, string> SupportedAggregates { get; set; }
     }
+
+    /// <summary>
+    /// TimescaleDB status from /api/timescaledb/status.
+    /// </summary>
+    public class TsdbStatusDto
+    {
+        public bool       Connected      { get; set; }
+        public string     Message        { get; set; }
+        public long       RowCount       { get; set; }
+        public int        TagCount       { get; set; }
+        public DateTime?  OldestTime     { get; set; }
+        public DateTime?  NewestTime     { get; set; }
+        public BackfillStatusDto Backfill { get; set; }
+    }
+
+    /// <summary>
+    /// Backfill progress from /api/timescaledb/backfill/status.
+    /// </summary>
+    public class BackfillStatusDto
+    {
+        public bool       IsRunning          { get; set; }
+        public bool       IsPaused           { get; set; }
+        public DateTime?  StartTime         { get; set; }
+        public DateTime?  EndTime           { get; set; }
+        public DateTime?  CurrentTime       { get; set; }
+        public long       TotalPoints       { get; set; }
+        public int        TagsProcessed     { get; set; }
+        public int        TotalTags         { get; set; }
+        public string      State             { get; set; }
+        public double      ProgressPct       { get; set; }
+        public string      EstimatedRemaining { get; set; }
+        public string      Elapsed           { get; set; }
+    }
 }

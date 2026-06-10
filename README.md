@@ -1,6 +1,6 @@
 # OPC HDA Broker
 
-A stateless RESTful proxy that translates HTTP requests into OPC HDA COM calls against **KepServerEX 6 Local Historian** (.TSD/.Active files). Designed for IT consumption by Power BI, Grafana, custom dashboards, and any HTTP client.
+A **stateless** RESTful proxy that translates HTTP requests into OPC HDA COM calls against **KepServerEX 6 Local Historian** (.TSD/.Active files). The broker stores nothing — it is a pure translator, a window into your historian data. All historical data recorded weeks, months, or years before the broker was written is fully accessible.
 
 ## Status: What Works
 | Feature | Status |
@@ -61,7 +61,70 @@ Invoke-RestMethod "http://localhost:5000/api/read/latest?tags=Simulations.Simula
                                        │  │ .TSD / .Active      │  │
                                        │  └─────────────────────┘  │
                                        └───────────────────────────┘
-                                       
+```
+
+### Data Lives in TSD Files
+
+```
+C:\ProgramData\Kepware\KEPServerEX\V6\Historical Data\
+├── Simulations/
+│   └── Simulator 1/
+│       ├── Simulations.Simulator 1.Active     ← currently being written to
+│       ├── Simulations.Simulator 1.001.TSD    ← sealed historical archive
+│       └── Simulations.Simulator 1.name       ← tag name index (metadata)
+```
+
+KepServerEX writes data every ~3 seconds into `.Active` files, which are sealed into `.TSD` archives as they grow. The broker **never writes** to these files — it reads through KepServerEX only.
+
+### Two Separate Processes
+
+**Tag Discovery** — The broker reads `.name` metadata files directly from the TSD datastore directory (no KepServerEX involved). This finds tag paths like `Simulations.Simulator 1.TAG_1`.
+
+**Data Retrieval** — HTTP requests are translated into `TsCHdaTrend.ReadRaw()` COM calls. KepServerEX reads from `.TSD` / `.Active` files internally and returns points through COM. The broker normalizes timestamps to UTC and returns JSON.
+
+```
+Grafana → Broker → COM: ReadRaw("TAG_1", 08:00, 09:00) → KepServerEX → TSD files
+                                                              ↑ reads binary data
+                                                              (proprietary format)
+```
+
+### Historical Data
+
+You can query any time range stored in the TSD files — including data recorded before the broker existed. The broker doesn't need to have been running when data was recorded.
+
+```powershell
+# Read data from April 2026 — before the broker was finalized
+$uri = "http://localhost:5000/api/read/points?tag=Simulations.Simulator 1.TAG_1&from=2026-04-28T00:00:00Z&to=2026-04-28T23:59:59Z"
+Invoke-RestMethod $uri
+```
+
+### Startup Sequence
+
+```
+Program.cs
+  └── OWIN WebAPI starts on port 5000
+  └── BrokerEngine.Initialize()
+
+BrokerEngine.Initialize()
+  └── Creates StaThreadDispatcher (dedicated MTA COM thread)
+  └── HdaConnection.Connect()       [on MTA thread]
+  └── HdaBrowser.DiscoverAllTags()  [on MTA thread]
+       ├── Tier 1: SDK Browser     → may fail at depth 2 (KepServerEX limitation)
+       ├── Tier 2: TSD .name files → primary method, reads metadata directly
+       └── Tier 3: tags.txt        → manual fallback
+```
+
+### Request Flow
+
+```
+HTTP GET /api/read/points
+  └── ReadController.ReadPoints()
+        └── BrokerEngine.ReadRawAsync()       → queues on MTA thread
+              └── StaThreadDispatcher.InvokeAsync()
+                    └── HdaReader.ReadRaw()   [on MTA thread]
+                          └── TsCHdaTrend.ReadRaw()  → COM → KepServerEX
+                                └── DateTime.SpecifyKind(ts, Utc)
+  └── JSON response: { "data": [{t,v,q}], "meta": {...} }
 ```
 
 ## API Endpoints
@@ -95,8 +158,6 @@ These endpoints were added specifically for the Grafana Infinity plugin (v3.8), 
 | `GET` | `/api/read/latest/table?tags=...` | Multi-tag flat rows `{data: [{tag,value,timestamp,quality}]}` |
 | `GET` | `/api/status/list` | Status wrapped in array `[{...}]` for Infinity column selectors |
 
-**Why these exist**: The original endpoints (`/api/read/raw`, `/api/read/latest`) wrap data in a nested structure — `data[0].points[0].v` — which the Infinity plugin cannot traverse. The `/points` and `/table` endpoints flatten the response so Infinity uses `root_selector: "data"` with simple `{selector: "v"}` column mappings.
-
 ### System
 
 | Method | Endpoint | Description |
@@ -122,9 +183,7 @@ Response:
       "tag": "Simulations.Simulator 1.TAG_1",
       "count": 5,
       "points": [
-        { "t": "2026-04-30T10:21:14.5660000Z", "v": 0, "q": "(Good:Not Limited)" },
-        { "t": "2026-04-30T10:21:17.5560000Z", "v": 10, "q": "(Good:Not Limited)" },
-        { "t": "2026-04-30T10:21:20.5580000Z", "v": 20, "q": "(Good:Not Limited)" }
+        { "t": "2026-04-30T10:21:14.5660000Z", "v": 0, "q": "(Good:Not Limited)" }
       ]
     }
   ],
@@ -138,13 +197,12 @@ Response:
 Invoke-RestMethod "http://localhost:5000/api/read/points?tag=Simulations.Simulator%201.TAG_1&from=2026-05-03T18:00:00Z&to=2026-05-03T20:00:00Z&maxValues=3"
 ```
 
-Response — note the flat `data` array (no nesting):
+Response — flat `data` array (no nesting):
 ```json
 {
   "data": [
     { "t": "2026-05-03T18:59:59.3990000Z", "v": 50, "q": "(Good:Not Limited)" },
-    { "t": "2026-05-03T19:00:02.4070000Z", "v": 60, "q": "(Good:Not Limited)" },
-    { "t": "2026-05-03T19:00:05.4090000Z", "v": 70, "q": "(Good:Not Limited)" }
+    { "t": "2026-05-03T19:00:02.4070000Z", "v": 60, "q": "(Good:Not Limited)" }
   ],
   "meta": { "count": 3, "executionMs": 4 }
 }
@@ -183,68 +241,39 @@ All settings in `App.config`:
 ### End-to-End Data Flow
 
 ```
-┌──────────────────────┐
-│  KepServerEX 6       │  OPC HDA COM server. Logs simulation tag values
-│  Local Historian      │  every 3 seconds into .TSD/.Active datastore files.
-│  (port: native COM)  │  Tags: Simulations.Simulator 1.TAG_1 … TAG_8
-└──────────┬───────────┘
-           │ COM/DCOM (MTA thread)
-           │ TsCHdaTrend.ReadRaw() / GetServerStatus()
-           │
-┌──────────▼───────────┐
-│  OPC HDA Broker      │  Translates COM calls into HTTP/JSON.
-│  (localhost:5000)     │  All timestamps normalized to UTC with trailing Z.
-│                       │  Grafana-specific flat endpoints:
-│  /api/read/points     │    → flat [{t,v,q}] for timeseries panels
-│  /api/read/latest/    │    → flat [{tag,value,timestamp,quality}]
-│    table              │       for table panels
-│  /api/status/list     │    → [{status fields}] for stat panels
-└──────────┬───────────┘
-           │ HTTP GET (JSON)
-           │ Grafana Infinity plugin proxies requests
-           │
-┌──────────▼───────────┐
-│  Grafana 13.0.1 OSS  │  Dashboarding & visualization.
-│  (localhost:3000)     │  Infinity datasource → Broker API.
-│                       │  10 panels: 4 stat, 5 timeseries, 1 table.
-│  Dashboard UID:       │
-│  opc-hda-historian    │
-└──────────────────────┘
+KepServerEX 6        OPC HDA Broker       Grafana
+Local Historian       (localhost:5000)     (localhost:3000)
+     │                      │                   │
+     │  logs every ~3s      │   HTTP GET         │
+     │  ─────────────────► │ ◄─────────────── │ Infinity plugin
+     │                     │   {data:[{t,v,q}]}│
+     │                     │ ───────────────► │
 ```
 
-**How it connects step by step:**
-
-1. **KepServerEX** logs simulated tag values into `.TSD` files on disk every ~3 seconds
-2. **OPC HDA Broker** discovers those tags by reading the `.name` metadata files in the TSD datastore directory
-3. When Grafana requests data, the **Infinity plugin** sends an HTTP GET to the broker (e.g. `GET /api/read/points?tag=...&from=...&to=...`)
-4. The broker dispatches a `ReadRaw()` COM call to KepServerEX on the MTA thread, retrieves the historian data points
-5. The broker normalizes all timestamps to **UTC with trailing `Z`** and returns flat JSON
-6. Grafana Infinity parses the flat JSON using `root_selector: "data"` and maps columns (`t` → timestamp, `v` → number)
-7. Grafana renders the timeseries chart, auto-refreshing every 30 seconds
+1. **KepServerEX** logs simulated tag values into `.TSD` files every ~3 seconds
+2. **OPC HDA Broker** discovers tags by reading `.name` metadata files
+3. Grafana Infinity sends HTTP GET to the broker
+4. Broker dispatches `ReadRaw()` COM call to KepServerEX
+5. Timestamps normalized to **UTC with trailing `Z`**
+6. Grafana renders the timeseries chart, auto-refreshing every 30 seconds
 
 ### Prerequisites
 
 - **Grafana OSS** ≥ 13.0 installed as a Windows service
 - **Infinity plugin** (yesoreyeram-infinity-datasource) v3.8+
 
-### Install Steps
-
 ```powershell
-# 1. Install Grafana OSS (if not already installed)
+# Install Grafana OSS
 winget install GrafanaLabs.Grafana.OSS
 
-# 2. Create a plugin directory (avoid Program Files permission issues)
+# Create plugin directory
 mkdir C:\Users\$env:USERNAME\grafana-plugins
 
-# 3. Install the Infinity plugin
+# Install Infinity plugin
 grafana cli --pluginsDir "C:\Users\$env:USERNAME\grafana-plugins" plugins install yesoreyeram-infinity-datasource
-
-# 4. Configure Grafana — create/edit custom.ini
-#    Location: C:\Program Files\GrafanaLabs\grafana\conf\custom.ini
-#    (or copy from deploy\grafana-custom.ini)
 ```
 
-**`custom.ini`** contents:
+Configure `custom.ini` (`C:\Program Files\GrafanaLabs\grafana\conf\custom.ini`):
 ```ini
 [paths]
 plugins = C:\Users\USERNAME\grafana-plugins
@@ -254,33 +283,15 @@ allow_loading_unsigned_plugins = yesoreyeram-infinity-datasource
 ```
 
 ```powershell
-# 5. Restart Grafana to load the plugin
+# Restart Grafana
 Restart-Service grafana
 
-# 6. Import the dashboard via API (Made using JSON)
+# Import dashboard
 $cred = [Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes("admin:admin"))
 $headers = @{ Authorization = "Basic $cred"; "Content-Type" = "application/json" }
 $body = Get-Content "deploy\grafana-dashboard.json" -Raw
 Invoke-RestMethod "http://localhost:3000/api/dashboards/db" -Method POST -Headers $headers -Body $body
 ```
-
-### Dashboard Panels Examples:
-
-| Panel | Type | Broker Endpoint | What it shows |
-|---|---|---|---|
-| Broker Status | Stat (green) | `/api/status/list` → `serverStatus` | ONLINE / Error |
-| KepServerEX | Stat | `/api/status/list` → `serverVersion` | e.g. `6.6.350` |
-| Tags | Stat (purple) | `/api/status/list` → `tagCount` | Number of discovered tags |
-| Uptime | Stat (orange) | `/api/status/list` → `brokerUptime` | Running duration |
-| TAG_1 – TAG_5 | Time series | `/api/read/points?tag=...` | Historical value chart |
-| Latest Values | Table | `/api/read/latest/table?tags=...` | All tags with last value |
-
-### Grafana Files
-
-| File | Purpose |
-|---|---|
-| `deploy/grafana-custom.ini` | Grafana `custom.ini` — plugin path + unsigned allow |
-| `deploy/grafana-dashboard.json` | Exportable dashboard JSON (import via API or UI) |
 
 ---
 
@@ -294,7 +305,7 @@ The broker runs on a **UTC+1 (WEST)** host. Without normalization, timestamps wo
 |---|---|---|
 | `HdaReader.cs` | `DateTime.Now` → `DateTime.UtcNow` | The `ReadLatest` lookback window used local time, so a "last 1h" query actually asked the historian for data offset by +1h |
 | `HdaReader.cs` | `DateTime.SpecifyKind(ts, DateTimeKind.Utc)` | Timestamps returned by the SDK have `Kind=Unspecified`; marking them as UTC ensures `.ToString("o")` appends `Z` |
-| `ReadController.cs` | `SpecifyKind` before `ToString("o")` | The DTO serialization point — forces every JSON timestamp to end with `Z` (e.g. `2026-05-03T19:00:02.4070000Z`) |
+| `ReadController.cs` | `SpecifyKind` before `ToString("o")` | The DTO serialization point — forces every JSON timestamp to end with `Z` |
 
 **Rule**: Every timestamp in the broker's JSON output ends with `Z`. Grafana interprets `Z` as UTC and applies the browser's local timezone in the UI automatically.
 
@@ -330,7 +341,7 @@ src/OpcHdaBroker/
 
 deploy/
 ├── grafana-custom.ini                  # Grafana config (plugin path + unsigned plugins)
-└── grafana-dashboard.json              # Provisioned Grafana dashboard (10 panels)
+└── grafana-dashboard.json             # Provisioned Grafana dashboard (10 panels)
 ```
 
 ## Technical Notes
@@ -355,5 +366,4 @@ The broker uses the Technosoftware `OpcClientSdk472.dll` (placed in `lib/`). All
 ### Known Limitations
 - **SDK Browse Depth**: The SDK's `ITsCHdaBrowser.Browse()` can navigate 1-2 levels but fails at deeper levels with `E_INVALIDARG` on `ChangeBrowsePosition`. This is a KepServerEX HDA browsing limitation — TSD auto-discovery compensates for this.
 - **Tag Path Format**: Tags use the `Channel.Device.Tag` dotted notation (e.g., `Simulations.Simulator 1.TAG_1`).
-
-### END OF THE DOCUMENT!
+- **Data Retention**: The broker has no influence on data retention. TSD file lifecycle is controlled entirely by KepServerEX's historian configuration.
