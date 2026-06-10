@@ -111,9 +111,10 @@ BrokerEngine.Initialize()
   └── Creates StaThreadDispatcher (dedicated MTA COM thread)
   └── HdaConnection.Connect()       [on MTA thread]
   └── HdaBrowser.DiscoverAllTags()  [on MTA thread]
-       ├── Tier 1: SDK Browser     → may fail at depth 2 (KepServerEX limitation)
-       ├── Tier 2: TSD .name files → primary method, reads metadata directly
-       └── Tier 3: tags.txt        → manual fallback
+       ├── Tier 1: SDK Browser         → may fail at depth 2 (KepServerEX limitation)
+       ├── Tier 2: Raw COM BROWSE_DIRECT → fallback if SDK fails
+       ├── Tier 3: TSD .name files     → reads metadata directly from disk
+       └── Tier 4: tags.txt            → manual fallback
 ```
 
 ### Request Flow
@@ -236,12 +237,13 @@ See `docs/report_k6.md` for load test results.
 
 ## Tag Discovery
 
-Tags are discovered using a **three-tier strategy** (in order):
+Tags are discovered using a **four-tier strategy** (in order):
 
 1. **SDK Browser** — `CreateBrowser()` → recursive namespace walk
-2. **TSD Auto-Discovery** — Reads tag paths from KepServerEX `.name` files in `C:\ProgramData\Kepware\KEPServerEX\V6\Historical Data\`
-3. **`tags.txt` Config File** — Manual tag list (one per line, `#` comments)
-4. **`POST /api/tags/add`** — Runtime registration via API
+2. **Raw COM Browser** — `IOPCHDA_Browser` with `BROWSE_DIRECT` (absolute path navigation) — fallback when the SDK's relative `DOWN` navigation fails at depth > 2
+3. **TSD Auto-Discovery** — Reads tag paths from KepServerEX `.name` files in `C:\ProgramData\Kepware\KEPServerEX\V6\Historical Data\`
+4. **`tags.txt` Config File** — Manual tag list (one per line, `#` comments)
+5. **`POST /api/tags/add`** — Runtime registration via API
 
 The TSD auto-discovery is the most reliable method for this deployment — it reads tag paths directly from the historian datastore metadata files, including from files locked by KepServerEX.
 
@@ -416,6 +418,6 @@ The broker uses the Technosoftware `OpcClientSdk472.dll` (placed in `lib/`). All
 - **`url_options.method` is mandatory** — Omitting it causes `Cannot read properties of undefined (reading 'method')`.
 
 ### Known Limitations
-- **SDK Browse Depth**: The SDK's `ITsCHdaBrowser.Browse()` can navigate 1-2 levels but fails at deeper levels with `E_INVALIDARG` on `ChangeBrowsePosition`. This is a KepServerEX HDA browsing limitation — TSD auto-discovery compensates for this.
+- **SDK Browse Depth**: The SDK's `ITsCHdaBrowser.Browse()` can navigate 1-2 levels but fails at deeper levels with `E_INVALIDARG` on `ChangeBrowsePosition`. The broker now tries raw COM `IOPCHDA_Browser` with `BROWSE_DIRECT` (absolute path navigation) as a fallback layer. If that also fails, TSD auto-discovery compensates by reading `.name` files directly from disk.
 - **Tag Path Format**: Tags use the `Channel.Device.Tag` dotted notation (e.g., `Simulations.Simulator 1.TAG_1`).
 - **Data Retention**: The broker has no influence on data retention. TSD file lifecycle is controlled entirely by KepServerEX's historian configuration.
