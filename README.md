@@ -13,11 +13,13 @@ A **stateless** RESTful proxy that translates HTTP requests into OPC HDA COM cal
 | Processed Reads | ✅ `ReadProcessed` (aggregates) |
 | Aggregate Query | ✅ SDK `GetAggregates()` |
 | Diagnostics | ✅ `/api/diagnostics` endpoint |
+| TimescaleDB Export | ✅ PostgreSQL/TimescaleDB ingestion + backfill |
+| Backfill | ✅ Chunked historical read + upsert |
 
 ## Quick Start
 
 ```powershell
-# Build (requires .NET Framework 4.72 SDK, x86)
+# Build (requires .NET Framework 4.7.2 SDK, x86)
 cd src\OpcHdaBroker
 dotnet build
 
@@ -167,6 +169,19 @@ These endpoints were added specifically for the Grafana Infinity plugin (v3.8), 
 | `GET` | `/api/health` | Simple liveness probe |
 | `GET` | `/api/diagnostics` | Full COM/SDK diagnostic report |
 
+### TimescaleDB (PostgreSQL Export)
+
+| Method | Endpoint | Description |
+|---|---|---|
+| `GET` | `/api/timescaledb/status` | Database connection status |
+| `GET` | `/api/timescaledb/backfill/status` | Backfill progress |
+| `POST` | `/api/timescaledb/backfill/start` | Start backfill |
+| `POST` | `/api/timescaledb/backfill/pause` | Pause backfill |
+| `POST` | `/api/timescaledb/backfill/resume` | Resume paused backfill |
+| `POST` | `/api/timescaledb/backfill/stop` | Stop backfill |
+| `POST` | `/api/timescaledb/backfill/range` | Backfill a custom date range |
+| `DELETE` | `/api/timescaledb/data?confirm=true` | Truncate all data |
+
 ### Example: Read Raw Data
 
 ```powershell
@@ -208,6 +223,17 @@ Response — flat `data` array (no nesting):
 }
 ```
 
+## TimescaleDB Export
+
+The broker can export historical data to **PostgreSQL/TimescaleDB** for long-term storage, SQL queries, and native Grafana datasource access.
+
+- `TsdbRepository` creates the `hda_data` hypertable with 1-day chunks on first connect
+- Data is bulk-upserted via `COPY` with `ON CONFLICT DO NOTHING`
+- `BackfillService` reads from KepServerEX in configurable chunks and writes to TimescaleDB
+- Backfill runs non-blocking — start it and check progress via `/api/timescaledb/backfill/status`
+
+See `docs/report_k6.md` for load test results.
+
 ## Tag Discovery
 
 Tags are discovered using a **three-tier strategy** (in order):
@@ -221,16 +247,35 @@ The TSD auto-discovery is the most reliable method for this deployment — it re
 
 ## Configuration
 
-All settings in `App.config`:
+Copy `App.config.example` → `App.config` and edit to match your environment:
 
 ```xml
 <appSettings>
-  <add key="Hda.PrimaryUrl" value="opchda://localhost/Kepware.KEPServerEX_HDA.V6" />
+  <!-- OPC HDA Connection -->
+  <add key="Hda.PrimaryUrl"  value="opchda://localhost/Kepware.KEPServerEX_HDA.V6" />
   <add key="Hda.FallbackUrl" value="opchda://127.0.0.1/Kepware.KEPServerEX_HDA.V6" />
+
+  <!-- TSD Datastore Path -->
   <add key="Hda.TsdDataPath" value="C:\ProgramData\Kepware\KEPServerEX\V6\Historical Data" />
-  <add key="Api.Port" value="5000" />
+
+  <!-- REST API -->
+  <add key="Api.BaseUrl"          value="http://localhost:5000" />
+
+  <!-- Cache -->
   <add key="Cache.TagListTtlSec" value="60" />
-  <add key="Log.Level" value="Debug" />
+
+  <!-- Logging -->
+  <add key="Log.Level"    value="Debug" />
+  <add key="Log.FilePath" value="logs\broker-.log" />
+
+  <!-- TimescaleDB (optional) -->
+  <add key="Tsdb.ConnectionString" value="Host=localhost;Port=5432;Database=hda;Username=postgres;Password=your_password_here" />
+
+  <!-- Backfill (optional) -->
+  <add key="Backfill.Enabled"     value="false" />
+  <add key="Backfill.StartDate"   value="2024-01-01T00:00:00Z" />
+  <add key="Backfill.EndDate"     value="2026-05-01T00:00:00Z" />
+  <add key="Backfill.ChunkDays"   value="30" />
 </appSettings>
 ```
 
@@ -317,7 +362,7 @@ The broker runs on a **UTC+1 (WEST)** host. Without normalization, timestamps wo
 src/OpcHdaBroker/
 ├── Program.cs                          # Entry point (console + service)
 ├── BrokerEngine.cs                     # Central orchestrator
-├── App.config                          # Configuration
+├── App.config.example                  # Configuration template (copy to App.config)
 ├── ComInterop/
 │   ├── HdaConnection.cs                # OPC HDA server connection
 │   ├── HdaBrowser.cs                   # Tag discovery (3-tier)
@@ -329,6 +374,7 @@ src/OpcHdaBroker/
 │   ├── Controllers/
 │   │   ├── TagsController.cs           # /api/tags endpoints
 │   │   ├── ReadController.cs           # /api/read + Grafana-friendly endpoints
+│   │   ├── TsdbController.cs           # /api/timescaledb endpoints
 │   │   ├── StatusController.cs         # /api/status + /api/status/list + /api/health
 │   │   └── DiagnosticsController.cs    # /api/diagnostics
 │   └── Models/
@@ -337,11 +383,17 @@ src/OpcHdaBroker/
 │   └── MemoryCache.cs                  # In-memory TTL cache
 ├── Diagnostics/
 │   └── DiagnosticRunner.cs             # Comprehensive SDK/COM diagnostic tool
+├── TimescaleDb/
+│   ├── TsdbRepository.cs               # Schema creation, bulk upsert via COPY
+│   └── BackfillService.cs              # Chunked historical read + DB write
 └── tags.txt                            # Tag configuration file
 
 deploy/
 ├── grafana-custom.ini                  # Grafana config (plugin path + unsigned plugins)
-└── grafana-dashboard.json             # Provisioned Grafana dashboard (10 panels)
+├── grafana-dashboard.json             # Provisioned Grafana dashboard (10 panels)
+├── install-service.bat                # Register broker as Windows Service
+├── uninstall-service.bat              # Unregister Windows Service
+└── setup-services.bat                 # One-click setup script
 ```
 
 ## Technical Notes
